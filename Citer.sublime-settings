@@ -1,4 +1,9 @@
+<<<<<<< HEAD
     {
     // Can be any combination of {author}, {title} and {citekey}; passing extra arguments via .format is (AFAIK) harmless.
     "quickview_format": "{author} - {title} - {citekey}"
+=======
+{
+"pandoc_cite_fix": true
+>>>>>>> master
 }
