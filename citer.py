@@ -96,8 +96,13 @@ def autparse(auth):
 class FindReplaceBracketCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         lstpos = self.view.find_all(r'\]\[')
+        lstpos2 = self.view.find_all(r'(@[\w:]+)\]\]')
         for i, pos in reversed(list(enumerate(lstpos))):
             self.view.replace(edit, pos, r'; ')
+        if lstpos2:
+            for i, pos in reversed(list(enumerate(lstpos2))):
+                lpr <- i.group(1)
+                self.view.replace(edit, pos, lpr)
 
 
 
