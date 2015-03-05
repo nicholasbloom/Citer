@@ -1,2 +1,8 @@
 */__pycache__
 *.pyc
+.gitignore
+.DS_Store
+*.aux
+*.bcf
+*.log
+*.xml
