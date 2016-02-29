@@ -2,8 +2,10 @@ from __future__ import print_function, absolute_import, division
 import sublime
 import sublime_plugin
 
+import re
 import sys
 import os.path
+
 
 # ST3 loads each package as a module, so it needs an extra prefix
 
@@ -48,25 +50,22 @@ def plugin_loaded():
     global COMPLETIONS_SCOPES
     global ENABLE_COMPLETIONS
     global _EXCLUDE
-<<<<<<< HEAD
     global QUICKVIEW_FORMAT
-=======
     global PANDOC_FIX
->>>>>>> master
 
     settings = sublime.load_settings('Citer.sublime-settings')
-
     BIBFILE_PATH = settings.get('bibtex_file_path')
     if BIBFILE_PATH is None or BIBFILE_PATH == '':
         sublime.status_message("WARNING: No BibTex file configured for Citer")
-    SEARCH_IN = settings.get('search_fields', ["author", "title", "year", "id"])
+    SEARCH_IN = settings.get('search_fields', ["title", "author", "year"])
     CITATION_FORMAT = settings.get('citation_format', "@%s")
+    QUICKVIEW_FORMAT = settings.get('quickview_format', '{citekey} - {title}')
     COMPLETIONS_SCOPES = settings.get('completions_scopes', ['text.html.markdown'])
     ENABLE_COMPLETIONS = settings.get('enable_completions', True)
     PANDOC_FIX = settings.get('pandoc_cite_fix', False)
     _EXCLUDE = settings.get('hide_other_completions', True)
-    QUICKVIEW_FORMAT = settings.get('quickview_format', '{citekey} - {title}')
     refresh_caches()
+
 
 
 def plugin_unloaded():
@@ -79,7 +78,7 @@ def plugin_unloaded():
 
 def autparse(auth):
     try:
-        aut = re.findall(r'\w+(?=,)',auth)
+        aut = re.findall(r"[\w']+(?=,)",auth)
         lat = len(aut)
         if lat==1:
             autt = aut[0]
@@ -90,8 +89,6 @@ def autparse(auth):
     except:
         autt = auth
     return autt
-
-
 
 class FindReplaceBracketCommand(sublime_plugin.TextCommand):
     def run(self, edit):
@@ -106,27 +103,13 @@ class FindReplaceBracketCommand(sublime_plugin.TextCommand):
 
 
 
-
 def refresh_caches():
     global LST_MOD_TIME
     global _DOCUMENTS
     global _MENU
     global _CITEKEYS
 
-    if isinstance(BIBFILE_PATH, list):
-        last_modified_time = [os.path.getmtime(x) for x in BIBFILE_PATH]
-
-        if LST_MOD_TIME is None or last_modified_time != LST_MOD_TIME:
-            LST_MOD_TIME = last_modified_time
-            for ldoc in BIBFILE_PATH:
-                with open(BIBFILE_PATH, 'r', encoding="utf-8") as bibfile:
-                    bp = BibTexParser(ldoc.read(), customization=convert_to_unicode)
-                    _DOCUMENTS.append(list(bp.get_entry_list()))
-            _MENU = _make_citekey_menu_list(_DOCUMENTS)
-            _CITEKEYS = [doc.get('id') for doc in _DOCUMENTS]
-
-    else:
-       last_modified_time = os.path.getmtime(BIBFILE_PATH)
+    last_modified_time = os.path.getmtime(BIBFILE_PATH)
 
     if LST_MOD_TIME is None or last_modified_time != LST_MOD_TIME:
         LST_MOD_TIME = last_modified_time
@@ -135,6 +118,7 @@ def refresh_caches():
             _DOCUMENTS = list(bp.get_entry_list())
             _MENU = _make_citekey_menu_list(_DOCUMENTS)
             _CITEKEYS = [doc.get('id') for doc in _DOCUMENTS]
+
 
 # Do some fancy build to get a sane list in the UI
 def _make_citekey_menu_list(bibdocs):
@@ -146,10 +130,16 @@ def _make_citekey_menu_list(bibdocs):
         #    menu_entry.append(title)
         #    menu_entry.append('  ' + doc.get('title')[90:])
         # else:
-        title = QUICKVIEW_FORMAT.format(
-            citekey=doc.get('id'), author=autparse(doc.get('author')), title=doc.get('title'))
-        menu_entry.append(title)
-        citekeys.append(menu_entry)
+        if doc.get('author'):
+            title = QUICKVIEW_FORMAT.format(
+                citekey=doc.get('id'), author=autparse(doc.get('author')), title=doc.get('title'),year=doc.get('year'))
+            menu_entry.append(title)
+            citekeys.append(menu_entry)
+        else:
+            title = QUICKVIEW_FORMAT.format(
+            citekey=doc.get('id'), author=autparse(doc.get('editor')), title=doc.get('title'),year=doc.get('year'))
+            menu_entry.append(title)
+            citekeys.append(menu_entry)
     citekeys = sorted(citekeys)
     return citekeys
 
@@ -206,6 +196,7 @@ class CiterSearchCommand(sublime_plugin.TextCommand):
         if item == -1:
             return
         ent = self.current_results_list[item]
+        #print(ent)
         ent = ent.split(' ')[0]
         citekey = CITATION_FORMAT % ent
         if PANDOC_FIX:
@@ -239,7 +230,7 @@ class CiterShowKeysCommand(sublime_plugin.TextCommand):
         if item == -1:
             return
         ent = self.current_results_list[item][0]
-        ent = ent.split(' ')[0]
+        ent = ent.split(' ')[-1]
         citekey = CITATION_FORMAT % ent
         if PANDOC_FIX:
             self.view.run_command('insert', {'characters': citekey})
